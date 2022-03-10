@@ -1,0 +1,11 @@
+{
+    "DB":{
+        "host": "etsydb.ciswmfyawe4r.us-east-2.rds.amazonaws.com",
+        "username" : "ramya",
+        "password" : "ramyareddy",
+        "port" : "3306",
+        "database" : "etsydb_schema"
+    },
+    "secret" : "etsyback",
+    "frontend" : "http://localhost:3000"
+}
