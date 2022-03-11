@@ -227,28 +227,78 @@ app.get('/protected', passport.authenticate('jwt', {session:false}),(req,res)=>
     })
  })
 
- app.post('/uploadImage',upload.single('files'), (req,res) =>{
-    if(!req.file){
-        console.log("No file uploaded");
-    
-    }else{
-        console.log(req.file.filename)
-        var imgsrc='http://localhost:5000/uploads'+req.file.filename
 
-        console.log(imgsrc);
-        dbConnection.query("INSERT INTO products (image) VALUES=? where productid=1001?",[imgsrc],
-        (err,result)=>{
-            console.log(result);
-            if(err){
-                res.json({success:false});
-            }else{
-                res.send({success:true})
+ app.post("/addProduct", async (req, res) => {
+    try {
+      let upload = multer({ storage: storage }).single("itemImage");
+      upload(req, res, function (err) {
+        if (!req.file) {
+          return res.send("Please select an image to upload");
+        } else if (err instanceof multer.MulterError) {
+          return res.send(err);
+        } else if (err) {
+          return res.send(err);
+        }
+  
+        const userId = req.params.id;
+        const itemName = req.body.itemName;
+        const itemDescriprion = req.body.itemDescription;
+        const itemPrice = req.body.itemPrice;
+        const itemCount = req.body.itemCount;
+        const itemImage = req.file.filename;
+        const itemCategory = req.body.itemCategory;
+  
+        console.log(itemImage);
+        console.log(itemName);
+        db.query(
+          "INSERT INTO Items (userId, itemName, itemCategory, itemPrice, itemDescription, itemCount, itemImage) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [
+            userId,
+            itemName,
+            itemCategory,
+            itemPrice,
+            itemDescriprion,
+            itemCount,
+            itemImage,
+          ],
+          (err, result) => {
+            if (err) {
+              console.log(err);
+              res.send({ message: "error" });
+            } else {
+              res.send({ message: "success" });
             }
-        })
+          }
+        );
+      });
+    } catch (err) {
+      console.log(err);
     }
-
-
- })
+  });
+  app.post("/getAllProducts", (req, res) => {
+    const id = req.params.id;
+    const limit = req.body.limit ? parseInt(req.body.limit) : 100;
+    const skip = parseInt(req.body.skip);
+  
+    console.log(req.body.skip + "skip");
+    console.log(req.body.limit + "limit");
+    db.query(
+      "SELECT * FROM Items WHERE userId=? LIMIT  ?, ?",
+      [id, skip, limit],
+      (err, result) => {
+        console.log(result.length + "result in db");
+        if (err) {
+          console.log("err");
+          res.send(err + "err");
+        } else {
+          console.log(result + "result");
+          res
+            .status(200)
+            .json({ success: true, result, postSize: result.length });
+        }
+      }
+    );
+  });
 
 //app.use(basePath,landingpage);s
 const PORT = process.env.PORT || 5000;
