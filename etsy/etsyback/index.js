@@ -14,9 +14,10 @@ app.use(bodyParser.json());
 const jwt=require('jsonwebtoken');
 const bcrypt=require('bcrypt');
 
+
 var storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, '../uploads')
+        cb(null, '../etsyfrontend/src/uploads')
     },
     filename: (req, file, cb)=>{
         const mimeExtension={
@@ -152,7 +153,8 @@ app.post("/login",(req,res) =>
                         res.send(
                             {success: true,
                             
-                            token: "Bearer "+accessToken}
+                            token: "Bearer "+accessToken,
+                            result}
                         )
                     }else{
                         res.send({message: "Wrong usename/password combination"});
@@ -173,6 +175,7 @@ app.post("/login",(req,res) =>
 
 
 var landingpage = require('./src/routes/landingpage.js');
+const { response } = require('express');
 app.get('/protected', passport.authenticate('jwt', {session:false}),(req,res)=>
  res.status(200).send({
      success:true,
@@ -228,10 +231,12 @@ app.get('/protected', passport.authenticate('jwt', {session:false}),(req,res)=>
  })
 
 
- app.post("/addProduct", async (req, res) => {
+ app.post("/addProductShop", async (req, res) => {
     try {
       let upload = multer({ storage: storage }).single("itemImage");
+
       upload(req, res, function (err) {
+          console.log("image name"+req.file);
         if (!req.file) {
           return res.send("Please select an image to upload");
         } else if (err instanceof multer.MulterError) {
@@ -240,7 +245,7 @@ app.get('/protected', passport.authenticate('jwt', {session:false}),(req,res)=>
           return res.send(err);
         }
   
-        const userId = req.params.id;
+        
         const itemName = req.body.itemName;
         const itemDescriprion = req.body.itemDescription;
         const itemPrice = req.body.itemPrice;
@@ -250,16 +255,17 @@ app.get('/protected', passport.authenticate('jwt', {session:false}),(req,res)=>
   
         console.log(itemImage);
         console.log(itemName);
-        db.query(
-          "INSERT INTO Items (userId, itemName, itemCategory, itemPrice, itemDescription, itemCount, itemImage) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        dbConnection.query(
+          "INSERT INTO products (productname, category, price, description, count, image) VALUES (?, ?, ?, ?, ?, ?)",
           [
-            userId,
+          
             itemName,
             itemCategory,
             itemPrice,
             itemDescriprion,
             itemCount,
             itemImage,
+
           ],
           (err, result) => {
             if (err) {
@@ -276,15 +282,15 @@ app.get('/protected', passport.authenticate('jwt', {session:false}),(req,res)=>
     }
   });
   app.post("/getAllProducts", (req, res) => {
-    const id = req.params.id;
+    
     const limit = req.body.limit ? parseInt(req.body.limit) : 100;
     const skip = parseInt(req.body.skip);
   
     console.log(req.body.skip + "skip");
     console.log(req.body.limit + "limit");
-    db.query(
-      "SELECT * FROM Items WHERE userId=? LIMIT  ?, ?",
-      [id, skip, limit],
+    dbConnection.query(
+      "SELECT * FROM products LIMIT  ?, ?",
+      [skip, limit],
       (err, result) => {
         console.log(result.length + "result in db");
         if (err) {
@@ -299,6 +305,176 @@ app.get('/protected', passport.authenticate('jwt', {session:false}),(req,res)=>
       }
     );
   });
+
+  app.get('/editProduct/:product_id',async (req,res)=>{
+      const user_id=req.params.product_id
+      
+      dbConnection.query("SELECT * FROM products WHERE productid=?",[user_id],
+      (err,result)=>{
+          if(err){
+              res.send({error:err});
+          }else{
+              res.send({success:"true",result})
+          }
+      })
+
+  })
+  app.post('/editProduct/:product_id',async(req,res)=>{
+      console.log("in post");
+          const user_id=req.params.product_id
+          const itemName = req.body.itemName;
+          const itemDescriprion = req.body.itemDescription;
+          const itemPrice = req.body.itemPrice;
+          const itemCount = req.body.itemCount;
+     
+          const itemCategory = req.body.itemCategory;
+    
+         
+          console.log(itemName);
+          dbConnection.query(
+            "UPDATE products SET productname=?, category=?, price=?, description=?, count=? WHERE productid=?",
+            [
+            
+              itemName,
+              itemCategory,
+              itemPrice,
+              itemDescriprion,
+              itemCount,
+              
+              user_id
+            ],
+            (err, result) => {
+              if (err) {
+                console.log(err);
+                res.send({ message: "error" });
+              } else {
+                res.send({ message: "success" });
+              }
+            }
+          );
+        });
+        app.post("/updateImage/:product_id",async (req, res) => {
+            console.log(req.body);
+            try {
+              let upload = multer({ storage: storage }).single("itemImage");
+        
+              upload(req, res, function (err) {
+                  console.log("image name"+req.file);
+                if (!req.file) {
+                  return res.send("Please select an image to upload");
+                } else if (err instanceof multer.MulterError) {
+                  return res.send(err);
+                } else if (err) {
+                  return res.send(err);
+                }
+          
+                
+                const user_id=req.params.product_id
+                const itemImage = req.file.filename;
+                
+          
+                console.log(itemImage);
+                
+                dbConnection.query(
+                  "UPDATE products set image=? WHERE productid=?",
+                  [
+                  
+                    
+                    itemImage,
+                    user_id,
+        
+                  ],
+                  (err, result) => {
+                    if (err) {
+                      console.log(err);
+                      res.send({ success: "false" });
+                    } else {
+                      res.send({ success: "true" });
+                    }
+                  }
+                );
+              });
+            } catch (err) {
+              console.log(err);
+            }
+          });
+      app.post("/updateshopImage/:user_id",async (req, res) => {
+        console.log("updateimage"+req.body);
+        try {
+          let upload = multer({ storage: storage }).single("itemImage");
+    
+          upload(req, res, function (err) {
+              console.log("image name"+req.file);
+            if (!req.file) {
+              return res.send("Please select an image to upload");
+            } else if (err instanceof multer.MulterError) {
+              return res.send(err);
+            } else if (err) {
+              return res.send(err);
+            }
+      
+            
+            const user_id=req.params.user_id
+            const itemImage = req.file.filename;
+            
+      
+            console.log(itemImage);
+            
+            dbConnection.query(
+              "UPDATE login set shopimage=? WHERE id=?",
+              [
+              
+                
+                itemImage,
+                user_id,
+    
+              ],
+              (err, result) => {
+                if (err) {
+                  console.log(err);
+                  res.send({ success: "false" });
+                } else {
+                  res.send({ success: "true" });
+                }
+              }
+            );
+          });
+        } catch (err) {
+          console.log(err);
+        }
+      });
+     app.get('/updateshopImage/:user_id',async (req,res)=>{
+      const user_id=req.params.user_id
+      
+      dbConnection.query("SELECT * FROM login WHERE id=?",[user_id],
+      (err,result)=>{
+          if(err){
+              res.send({error:err});
+          }else{
+
+              res.send({success:"true",result})
+          }
+      })
+
+  })
+   
+  app.get("/getSearchItems/:SearchTerms", (req, res) => {
+    console.log("get Search Items -------------------------------");
+    const searchValue = req.params.SearchTerms;
+    console.log(searchValue);
+  
+    dbConnection.query(
+      `SELECT * FROM products WHERE productname REGEXP '${searchValue}'`,
+      (err, result) => {
+        console.log(result);
+        if (err) {
+          res.send(err);
+        } else {
+          res.send({ success: true, result });
+        }
+      }
+    );
+  });  
 
 //app.use(basePath,landingpage);s
 const PORT = process.env.PORT || 5000;
